@@ -43,22 +43,10 @@ jobs:
           ${ECR_URL}/${ECR_REPOSITORY}:${{ steps.vars.outputs.image_tag }}
           docker push ${ECR_URL}/${ECR_REPOSITORY}:${{ steps.vars.outputs.image_tag }}
 
-  test:
+  deploy-staging:
     runs-on: ubuntu-latest
     needs: build
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Basic Validation
-        run: |
-          echo "Running basic validation..."
-          test -f app/Dockerfile
-          echo "Validation successful"
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: test
+    environment: staging
 
     steps:
       - uses: actions/checkout@v4
@@ -73,8 +61,32 @@ jobs:
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
 
-      - name: Deploy using Helm
+      - name: Deploy to Staging
         run: |
           helm upgrade --install eks-app ./helm/eks-app \
-            -n dev \
+            -n staging \
+            --set image.tag=${{ needs.build.outputs.image_tag }}
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
+
+      - name: Deploy to Production
+        run: |
+          helm upgrade --install eks-app ./helm/eks-app \
+            -n production \
             --set image.tag=${{ needs.build.outputs.image_tag }}
