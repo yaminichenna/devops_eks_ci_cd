@@ -35,7 +35,7 @@ jobs:
       - name: Build and Push Docker Image
         run: |
           ECR_URL="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-          docker build -t ${ECR_REPOSITORY}:${IMAGE_TAG} .
+          docker build -t ${ECR_REPOSITORY}:${IMAGE_TAG} ./app
           docker tag ${ECR_REPOSITORY}:${IMAGE_TAG} ${ECR_URL}/${ECR_REPOSITORY}:${IMAGE_TAG}
           docker push ${ECR_URL}/${ECR_REPOSITORY}:${IMAGE_TAG}
 
