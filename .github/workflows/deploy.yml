@@ -42,6 +42,13 @@ jobs:
           docker tag ${ECR_REPOSITORY}:${{ steps.vars.outputs.image_tag }} \
           ${ECR_URL}/${ECR_REPOSITORY}:${{ steps.vars.outputs.image_tag }}
           docker push ${ECR_URL}/${ECR_REPOSITORY}:${{ steps.vars.outputs.image_tag }}
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ${{ env.ECR_REPOSITORY }}:${{ steps.vars.outputs.image_tag }}
+          format: table
+          exit-code: '1'
+          severity: CRITICAL,HIGH
 
   deploy-staging:
     runs-on: ubuntu-latest
