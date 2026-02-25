@@ -1,0 +1,18 @@
+replicaCount: 2
+
+image:
+  repository: 495417556969.dkr.ecr.us-east-1.amazonaws.com/devops-nginx-app
+  tag: "manual"
+  pullPolicy: Always
+
+service:
+  type: LoadBalancer
+  port: 80
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
