@@ -1,4 +1,3 @@
-cat << 'EOF' > README.md
 # DevOps EKS Platform (Production-Style CI/CD on AWS)
 
 ## Overview
@@ -80,6 +79,7 @@ Helm enables:
 ---
 
 ## Project Structure
+```text
 .
 ├── terraform/ # Infrastructure as Code
 ├── app/ # Application source and Dockerfile
@@ -212,5 +212,3 @@ Pipeline will automatically:
 - IAM and OIDC authentication
 - Helm-based release management
 - Production deployment strategy
-
-EOF
