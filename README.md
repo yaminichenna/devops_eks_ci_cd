@@ -86,7 +86,7 @@ Helm enables:
 ├── helm/ # Helm chart for Kubernetes deployment
 ├── .github/workflows # CI/CD pipeline
 ├── README.md
-└── .gitignore
+└── .gitignore '''
 
 ---
 
