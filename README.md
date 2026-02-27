@@ -79,14 +79,13 @@ Helm enables:
 ---
 
 ## Project Structure
-```text
 .
 ├── terraform/ # Infrastructure as Code
 ├── app/ # Application source and Dockerfile
 ├── helm/ # Helm chart for Kubernetes deployment
 ├── .github/workflows # CI/CD pipeline
 ├── README.md
-└── .gitignore '''
+└── .gitignore 
 
 ---
 
