@@ -1,18 +1,18 @@
-# DevOps EKS Platform (Production-Style CI/CD on AWS)
+# Production-Style DevOps Platform on AWS (EKS + Terraform + GitHub Actions)
 
-## Overview
+## Project Overview
 
-This project demonstrates a complete end-to-end DevOps platform built on AWS using Infrastructure as Code, Kubernetes, and GitHub Actions.
+This project demonstrates a production-oriented DevOps platform built on AWS using Infrastructure as Code and Kubernetes best practices.
 
-The system provisions production-ready infrastructure with Terraform, builds and scans container images, and deploys versioned applications to Amazon EKS using Helm and a multi-stage CI/CD pipeline.
+The platform provisions infrastructure using Terraform, builds and scans container images, and deploys applications to Amazon EKS using Helm through a gated multi-stage GitHub Actions pipeline.
 
 This project focuses on:
 
-- Reproducible infrastructure
-- Secure authentication (OIDC, no static AWS keys)
-- Deterministic deployments (commit-based image tagging)
-- Environment separation
-- Production-oriented Kubernetes configuration
+- Reproducible infrastructure provisioning
+- Secure authentication using OIDC (no static AWS credentials)
+- Deterministic deployments using commit-based image tagging
+- Multi-environment promotion (staging → production)
+- Production deployment controls
 
 ---
 
@@ -21,75 +21,48 @@ This project focuses on:
 ### Infrastructure Layer (Terraform)
 
 - Custom VPC (10.0.0.0/16)
-- Public and Private subnets across two AZs
+- Public and Private subnets across two Availability Zones
 - NAT Gateways for outbound internet access from private subnets
 - Amazon EKS cluster
-- Managed node group
-- Amazon ECR repository (scan on push enabled)
+- Managed Node Group
+- Amazon ECR repository (scan-on-push enabled)
 - Remote Terraform backend (S3 + DynamoDB locking)
+
+Worker nodes run in private subnets for improved security isolation.
+
+---
 
 ### Application Layer
 
 - Dockerized Nginx application
 - Helm chart for Kubernetes deployment
-- Resource limits and requests
+- Resource requests and limits
 - Liveness and readiness probes
+- Rolling update strategy
 - Horizontal Pod Autoscaler (HPA)
 
-### CI/CD Layer (GitHub Actions)
+Container images are tagged using Git commit SHA for traceability and deterministic rollbacks.
 
-Developer Push → GitHub → Pipeline executes:
+---
+
+### CI/CD Pipeline (GitHub Actions)
+
+Pipeline stages:
 
 1. Build Docker image
-2. Tag image using Git commit SHA
+2. Tag image using commit SHA
 3. Push image to Amazon ECR
-4. Scan image for vulnerabilities (Trivy)
-5. Deploy using Helm upgrade
-6. Authenticate to AWS using OIDC (no stored AWS credentials)
+4. Run vulnerability scan using Trivy
+5. Deploy automatically to staging
+6. Require manual approval before deploying to production
+
+Production deployments are protected using GitHub Environment approval rules.
+
+Authentication to AWS is implemented using OIDC-based IAM role assumption, eliminating long-lived AWS credentials.
 
 ---
 
-## Why These Design Decisions?
-
-### Private Subnets for Worker Nodes
-Nodes run in private subnets for security. They access the internet through NAT gateways but are not directly exposed.
-
-### Commit SHA Image Tagging
-Using commit SHA ensures:
-- Traceable deployments
-- Deterministic rollbacks
-- No ambiguity from `latest` tag usage
-
-### OIDC Instead of Access Keys
-GitHub Actions assumes an IAM role via OIDC.
-This eliminates long-lived AWS credentials and follows least-privilege security principles.
-
-### Remote Terraform Backend
-State is stored in S3 with DynamoDB locking to:
-- Prevent concurrent state corruption
-- Enable collaborative infrastructure management
-
-### Helm Instead of kubectl apply
-Helm enables:
-- Versioned releases
-- Easy rollbacks
-- Parameterized deployments
-- Consistent upgrade strategy
-
----
-
-## Project Structure
-.
-├── terraform/ # Infrastructure as Code
-├── app/ # Application source and Dockerfile
-├── helm/ # Helm chart for Kubernetes deployment
-├── .github/workflows # CI/CD pipeline
-├── README.md
-└── .gitignore 
-
----
-
-## Environments
+## Environment Strategy
 
 Kubernetes namespaces are used for environment isolation:
 
@@ -97,117 +70,71 @@ Kubernetes namespaces are used for environment isolation:
 - staging
 - production
 
-Each deployment uses versioned container images and Helm upgrades for controlled rollout.
+Deployment flow:
 
----
-
-## CI/CD Stages
-
-### Build
-Builds Docker image and tags using commit SHA.
-
-### Scan
-Performs vulnerability scanning using Trivy. Pipeline fails on high/critical vulnerabilities.
-
-### Deploy
-Authenticates via OIDC, updates kubeconfig, and performs Helm upgrade in target namespace.
-
----
-
-## Scaling Strategy
-
-- Horizontal Pod Autoscaler adjusts replicas based on CPU utilization.
-- Rolling updates ensure zero downtime deployments.
-- Resource requests and limits prevent noisy neighbor issues.
+Developer Push → Build → Scan → Deploy Staging → Manual Approval → Deploy Production
 
 ---
 
 ## Security Practices Implemented
 
-- No static AWS credentials
-- IAM least privilege roles
-- ECR scan on push
-- Trivy image scanning in pipeline
+- No static AWS access keys
+- OIDC-based GitHub authentication
 - Private worker nodes
-- Terraform state locking
-
----
-
-## How to Provision Infrastructure
-
----
-
-## Environments
-
-Kubernetes namespaces are used for environment isolation:
-
-- dev
-- staging
-- production
-
-Each deployment uses versioned container images and Helm upgrades for controlled rollout.
-
----
-
-## CI/CD Stages
-
-### Build
-Builds Docker image and tags using commit SHA.
-
-### Scan
-Performs vulnerability scanning using Trivy. Pipeline fails on high/critical vulnerabilities.
-
-### Deploy
-Authenticates via OIDC, updates kubeconfig, and performs Helm upgrade in target namespace.
+- ECR image scanning enabled
+- Trivy vulnerability scanning in CI pipeline
+- Terraform remote state with locking
+- Production approval gate before release
 
 ---
 
 ## Scaling Strategy
 
-- Horizontal Pod Autoscaler adjusts replicas based on CPU utilization.
-- Rolling updates ensure zero downtime deployments.
-- Resource requests and limits prevent noisy neighbor issues.
+- Horizontal Pod Autoscaler based on CPU utilization
+- Rolling updates ensure zero-downtime deployments
+- Resource requests and limits prevent resource contention
 
 ---
 
-## Security Practices Implemented
-
-- No static AWS credentials
-- IAM least privilege roles
-- ECR scan on push
-- Trivy image scanning in pipeline
-- Private worker nodes
-- Terraform state locking
+## Repository Structure
+.  
+├── terraform/ Infrastructure as Code (AWS + EKS)  
+├── app/ Application source & Dockerfile  
+├── helm/ Helm chart for Kubernetes deployment  
+├── .github/workflows CI/CD pipeline definition  
+├── .gitignore  
+└── README.md
 
 ---
 
-## How to Provision Infrastructure
-cd terraform
-terraform init
-terraform plan
+## Provision Infrastructure
+cd terraform  
+terraform init  
+terraform plan  
 terraform apply
 
-
 ---
 
-## How to Deploy Application
+## Deploy Application
 
-Push code to main branch.  
-Pipeline will automatically:
+Push changes to the main branch.
 
+The pipeline will automatically:
 - Build
 - Scan
 - Push
-- Deploy
-
+- Deploy to staging
+- Wait for production approval
+- Deploy to production
 ---
-
-## Key Skills Demonstrated
+## Key Concepts Demonstrated
 
 - Infrastructure as Code (Terraform)
-- Kubernetes operations
-- Secure CI/CD design
+- Kubernetes production deployment patterns
+- Secure CI/CD pipeline design
 - Cloud networking architecture
 - IAM and OIDC authentication
 - Helm-based release management
-- Production deployment strategy
+- Multi-environment promotion strategy
+- Deployment protection controls
+
